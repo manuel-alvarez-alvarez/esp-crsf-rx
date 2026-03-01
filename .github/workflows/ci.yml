@@ -55,8 +55,8 @@ jobs:
         run: ctest --test-dir test/build --output-on-failure --output-junit results.xml
 
       - name: Publish test results
-        uses: EnricoMi/publish-unit-test-result-action@v2
+        uses: mikepenz/action-junit-report@v5
         if: always()
         with:
-          files: test/build/results.xml
+          report_paths: test/build/results.xml
           check_name: Test Results
