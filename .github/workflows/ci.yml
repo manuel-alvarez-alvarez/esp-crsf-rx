@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+
+jobs:
+
+  build:
+    name: ESP-IDF Build (${{ matrix.idf_target }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        idf_target: [ esp32, esp32s3, esp32c3 ]
+    container:
+      image: espressif/idf:v5.4
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Build example
+        working-directory: examples/basic
+        run: |
+          . $IDF_PATH/export.sh
+          idf.py set-target ${{ matrix.idf_target }}
+          idf.py build
+        shell: bash
+
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Configure
+        run: cmake -B test/build test
+
+      - name: Build
+        run: cmake --build test/build
+
+      - name: Run tests
+        run: ctest --test-dir test/build --output-on-failure --output-junit results.xml
+
+      - name: Publish test results
+        uses: dorny/test-reporter@v2
+        if: always()
+        with:
+          name: Test Results
+          path: test/build/results.xml
+          reporter: java-junit
