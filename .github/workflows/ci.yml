@@ -3,6 +3,9 @@ name: CI
 on:
   push:
 
+env:
+  IDF_VERSION: "5.4"
+
 jobs:
 
   build:
@@ -12,18 +15,26 @@ jobs:
       fail-fast: false
       matrix:
         idf_target: [ esp32, esp32s3, esp32c3 ]
-    container:
-      image: espressif/idf:v5.4
     steps:
       - uses: actions/checkout@v6
 
+      - name: Restore ccache
+        uses: actions/cache@v5.0.3
+        with:
+          path: .ccache
+          key: ccache-idf-v${{ env.IDF_VERSION }}-${{ matrix.idf_target }}
+
       - name: Build example
-        working-directory: examples/basic
-        run: |
-          . $IDF_PATH/export.sh
-          idf.py set-target ${{ matrix.idf_target }}
-          idf.py build
-        shell: bash
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v${{ env.IDF_VERSION }}
+          target: ${{ matrix.idf_target }}
+          path: examples/basic
+          extra_docker_args: >-
+            -v ${{ github.workspace }}/.ccache:/root/.ccache
+            -e CCACHE_DIR=/root/.ccache
+            -e IDF_CCACHE_ENABLE=1
+            -e CCACHE_MAXSIZE=500M
 
   test:
     name: Unit Tests
