@@ -52,11 +52,18 @@ jobs:
         run: cmake --build test/build
 
       - name: Run tests
-        run: ctest --test-dir test/build --output-on-failure --output-junit results.xml
+        run: |
+          ctest --test-dir test/build --output-on-failure --output-junit results.xml
+          sed -i \
+            -e 's/name="(empty)"/name="esp-crsf-rx"/' \
+            -e 's/classname="test_parser_[^"]*"/classname="parser"/g' \
+            -e 's/classname="test_channels_[^"]*"/classname="channels"/g' \
+            -e 's/classname="test_unpack_[^"]*"/classname="telemetry"/g' \
+            test/build/results.xml
 
       - name: Publish test results
-        uses: mikepenz/action-junit-report@v5
-        if: always()
+        uses: mikepenz/action-junit-report@v6
+        if: success() || failure()
         with:
           report_paths: test/build/results.xml
           check_name: Test Results
