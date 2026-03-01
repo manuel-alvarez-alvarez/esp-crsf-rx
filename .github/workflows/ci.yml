@@ -39,6 +39,9 @@ jobs:
   test:
     name: Unit Tests
     runs-on: ubuntu-latest
+    permissions:
+      checks: write
+      contents: read
     steps:
       - uses: actions/checkout@v6
 
@@ -49,14 +52,11 @@ jobs:
         run: cmake --build test/build
 
       - name: Run tests
-        run: |
-          ctest --test-dir test/build --output-on-failure --output-junit results.xml
-          sed -i 's/name="(empty)"/name="crsf_parser"/' test/build/results.xml
+        run: ctest --test-dir test/build --output-on-failure --output-junit results.xml
 
       - name: Publish test results
-        uses: dorny/test-reporter@v2
+        uses: EnricoMi/publish-unit-test-result-action@v2
         if: always()
         with:
-          name: Test Results
-          path: test/build/results.xml
-          reporter: java-junit
+          files: test/build/results.xml
+          check_name: Test Results
