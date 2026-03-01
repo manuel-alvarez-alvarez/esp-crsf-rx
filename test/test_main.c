@@ -1,7 +1,17 @@
 #include "unity.h"
+#include <string.h>
 
 void setUp(void)    {}
 void tearDown(void) {}
+
+/* ── CLI filter: -n <test_name> runs only that test ─────────────────── */
+static const char *g_filter = NULL;
+
+#define RUN_FILTERED_TEST(func)                              \
+    do {                                                     \
+        if (!g_filter || strcmp(g_filter, #func) == 0)        \
+            RUN_TEST(func);                                  \
+    } while (0)
 
 /* ── test_parser_fsm.c ──────────────────────────────────────────────── */
 extern void test_parser_valid_rc_channels_frame(void);
@@ -58,64 +68,69 @@ extern void test_unpack_device_info_truncated(void);
 extern void test_unpack_device_info_short(void);
 extern void test_unpack_device_info_long_name(void);
 
-int main(void)
+int main(int argc, char *argv[])
 {
+    for (int i = 1; i < argc; i++) {
+        if (strcmp(argv[i], "-n") == 0 && i + 1 < argc)
+            g_filter = argv[++i];
+    }
+
     UNITY_BEGIN();
 
     /* Parser FSM */
-    RUN_TEST(test_parser_valid_rc_channels_frame);
-    RUN_TEST(test_parser_all_sync_bytes);
-    RUN_TEST(test_parser_byte_at_a_time);
-    RUN_TEST(test_parser_garbage_before_frame);
-    RUN_TEST(test_parser_bad_crc);
-    RUN_TEST(test_parser_resync_after_invalid_length);
-    RUN_TEST(test_parser_null_callback);
-    RUN_TEST(test_parser_two_consecutive_frames);
-    RUN_TEST(test_parser_length_too_small);
-    RUN_TEST(test_parser_length_too_large);
-    RUN_TEST(test_parser_max_payload);
-    RUN_TEST(test_parser_feed_empty);
-    RUN_TEST(test_parser_resync_sync_as_length);
-    RUN_TEST(test_parser_multiple_frames_single_feed);
-    RUN_TEST(test_parser_interleaved_garbage);
-    RUN_TEST(test_parser_bad_crc_then_valid);
-    RUN_TEST(test_parser_non_sync_byte_idle);
-    RUN_TEST(test_parser_frame_type_and_payload_passed);
+    RUN_FILTERED_TEST(test_parser_valid_rc_channels_frame);
+    RUN_FILTERED_TEST(test_parser_all_sync_bytes);
+    RUN_FILTERED_TEST(test_parser_byte_at_a_time);
+    RUN_FILTERED_TEST(test_parser_garbage_before_frame);
+    RUN_FILTERED_TEST(test_parser_bad_crc);
+    RUN_FILTERED_TEST(test_parser_resync_after_invalid_length);
+    RUN_FILTERED_TEST(test_parser_null_callback);
+    RUN_FILTERED_TEST(test_parser_two_consecutive_frames);
+    RUN_FILTERED_TEST(test_parser_length_too_small);
+    RUN_FILTERED_TEST(test_parser_length_too_large);
+    RUN_FILTERED_TEST(test_parser_max_payload);
+    RUN_FILTERED_TEST(test_parser_feed_empty);
+    RUN_FILTERED_TEST(test_parser_resync_sync_as_length);
+    RUN_FILTERED_TEST(test_parser_multiple_frames_single_feed);
+    RUN_FILTERED_TEST(test_parser_interleaved_garbage);
+    RUN_FILTERED_TEST(test_parser_bad_crc_then_valid);
+    RUN_FILTERED_TEST(test_parser_non_sync_byte_idle);
+    RUN_FILTERED_TEST(test_parser_frame_type_and_payload_passed);
 
     /* Channel unpacking */
-    RUN_TEST(test_channels_all_zeros);
-    RUN_TEST(test_channels_all_max);
-    RUN_TEST(test_channels_known_midpoint);
-    RUN_TEST(test_channels_single_channel_hot);
-    RUN_TEST(test_channels_alternating);
-    RUN_TEST(test_channels_ascending);
+    RUN_FILTERED_TEST(test_channels_all_zeros);
+    RUN_FILTERED_TEST(test_channels_all_max);
+    RUN_FILTERED_TEST(test_channels_known_midpoint);
+    RUN_FILTERED_TEST(test_channels_single_channel_hot);
+    RUN_FILTERED_TEST(test_channels_alternating);
+    RUN_FILTERED_TEST(test_channels_ascending);
 
     /* Telemetry unpacking */
-    RUN_TEST(test_unpack_link_stats);
-    RUN_TEST(test_unpack_link_stats_negative_snr);
-    RUN_TEST(test_unpack_gps);
-    RUN_TEST(test_unpack_gps_negative_coords);
-    RUN_TEST(test_unpack_gps_zero);
-    RUN_TEST(test_unpack_vario);
-    RUN_TEST(test_unpack_vario_negative);
-    RUN_TEST(test_unpack_battery);
-    RUN_TEST(test_unpack_battery_zero);
-    RUN_TEST(test_unpack_battery_max_capacity);
-    RUN_TEST(test_unpack_baro_altitude_short);
-    RUN_TEST(test_unpack_baro_altitude_with_vario);
-    RUN_TEST(test_unpack_baro_altitude_negative);
-    RUN_TEST(test_unpack_heartbeat);
-    RUN_TEST(test_unpack_heartbeat_broadcast);
-    RUN_TEST(test_unpack_attitude);
-    RUN_TEST(test_unpack_attitude_negative);
-    RUN_TEST(test_unpack_flight_mode);
-    RUN_TEST(test_unpack_flight_mode_truncation);
-    RUN_TEST(test_unpack_flight_mode_empty);
-    RUN_TEST(test_unpack_device_ping);
-    RUN_TEST(test_unpack_device_info);
-    RUN_TEST(test_unpack_device_info_truncated);
-    RUN_TEST(test_unpack_device_info_short);
-    RUN_TEST(test_unpack_device_info_long_name);
+    RUN_FILTERED_TEST(test_unpack_link_stats);
+    RUN_FILTERED_TEST(test_unpack_link_stats_negative_snr);
+    RUN_FILTERED_TEST(test_unpack_gps);
+    RUN_FILTERED_TEST(test_unpack_gps_negative_coords);
+    RUN_FILTERED_TEST(test_unpack_gps_zero);
+    RUN_FILTERED_TEST(test_unpack_vario);
+    RUN_FILTERED_TEST(test_unpack_vario_negative);
+    RUN_FILTERED_TEST(test_unpack_battery);
+    RUN_FILTERED_TEST(test_unpack_battery_zero);
+    RUN_FILTERED_TEST(test_unpack_battery_max_capacity);
+    RUN_FILTERED_TEST(test_unpack_baro_altitude_short);
+    RUN_FILTERED_TEST(test_unpack_baro_altitude_with_vario);
+    RUN_FILTERED_TEST(test_unpack_baro_altitude_negative);
+    RUN_FILTERED_TEST(test_unpack_heartbeat);
+    RUN_FILTERED_TEST(test_unpack_heartbeat_broadcast);
+    RUN_FILTERED_TEST(test_unpack_attitude);
+    RUN_FILTERED_TEST(test_unpack_attitude_negative);
+    RUN_FILTERED_TEST(test_unpack_flight_mode);
+    RUN_FILTERED_TEST(test_unpack_flight_mode_truncation);
+    RUN_FILTERED_TEST(test_unpack_flight_mode_empty);
+    RUN_FILTERED_TEST(test_unpack_device_ping);
+    RUN_FILTERED_TEST(test_unpack_device_info);
+    RUN_FILTERED_TEST(test_unpack_device_info_truncated);
+    RUN_FILTERED_TEST(test_unpack_device_info_short);
+    RUN_FILTERED_TEST(test_unpack_device_info_long_name);
 
     return UNITY_END();
 }

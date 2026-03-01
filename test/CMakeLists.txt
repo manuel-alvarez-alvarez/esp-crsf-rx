@@ -26,4 +26,10 @@ target_include_directories(crsf_tests PRIVATE
 target_link_libraries(crsf_tests PRIVATE unity)
 
 enable_testing()
-add_test(NAME crsf_tests COMMAND crsf_tests)
+
+# Auto-discover individual test cases from RUN_FILTERED_TEST() calls
+file(STRINGS ${CMAKE_CURRENT_SOURCE_DIR}/test_main.c _test_lines REGEX "RUN_FILTERED_TEST\\(test_")
+foreach(_line ${_test_lines})
+    string(REGEX MATCH "RUN_FILTERED_TEST\\(([a-zA-Z_0-9]+)\\)" _ ${_line})
+    add_test(NAME ${CMAKE_MATCH_1} COMMAND crsf_tests -n ${CMAKE_MATCH_1})
+endforeach()
