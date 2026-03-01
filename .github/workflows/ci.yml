@@ -67,3 +67,9 @@ jobs:
         with:
           report_paths: test/build/results.xml
           check_name: Test Results
+          include_passed: true
+          detailed_summary: true
+          include_time_in_summary: true
+          group_suite: true
+          require_tests: true
+          fail_on_failure: true
