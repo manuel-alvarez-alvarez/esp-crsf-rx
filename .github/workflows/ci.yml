@@ -49,7 +49,9 @@ jobs:
         run: cmake --build test/build
 
       - name: Run tests
-        run: ctest --test-dir test/build --output-on-failure --output-junit results.xml
+        run: |
+          ctest --test-dir test/build --output-on-failure --output-junit results.xml
+          sed -i 's/name="(empty)"/name="crsf_parser"/' test/build/results.xml
 
       - name: Publish test results
         uses: dorny/test-reporter@v2
