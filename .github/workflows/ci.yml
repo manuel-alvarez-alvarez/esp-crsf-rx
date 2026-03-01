@@ -1,7 +1,7 @@
 name: CI
 
 on:
-  push:
+  pull_request:
 
 env:
   IDF_VERSION: "5.4"
@@ -42,6 +42,7 @@ jobs:
     permissions:
       checks: write
       contents: read
+      pull-requests: write
     steps:
       - uses: actions/checkout@v6
 
@@ -73,3 +74,5 @@ jobs:
           group_suite: true
           require_tests: true
           fail_on_failure: true
+          comment: true
+          updateComment: true
