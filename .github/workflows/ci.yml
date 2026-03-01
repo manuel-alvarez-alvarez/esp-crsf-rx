@@ -18,10 +18,22 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - name: Cache Docker images
-        uses: ScribeMD/docker-cache@0.5.0
+      - name: Cache ESP-IDF Docker image
+        id: cache-idf
+        uses: actions/cache@v5.0.3
         with:
-          key: docker-idf-v${{ env.IDF_VERSION }}
+          path: /tmp/idf-image.tar
+          key: idf-docker-v${{ env.IDF_VERSION }}
+
+      - name: Load cached Docker image
+        if: steps.cache-idf.outputs.cache-hit == 'true'
+        run: docker load -i /tmp/idf-image.tar
+
+      - name: Pull and save Docker image
+        if: steps.cache-idf.outputs.cache-hit != 'true'
+        run: |
+          docker pull espressif/idf:v${{ env.IDF_VERSION }}
+          docker save espressif/idf:v${{ env.IDF_VERSION }} -o /tmp/idf-image.tar
 
       - name: Restore ccache
         uses: actions/cache@v5.0.3
