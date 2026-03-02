@@ -109,6 +109,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
+      - name: Create GitHub release
+        if: steps.guard.outputs.release == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: v${{ steps.version.outputs.version }}
+          body: ${{ steps.notes.outputs.changelog }}
+
       - name: Upload component to the component registry
         uses: espressif/upload-components-ci-action@v2
         with:
