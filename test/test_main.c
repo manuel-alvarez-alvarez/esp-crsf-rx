@@ -32,6 +32,9 @@ extern void test_parser_interleaved_garbage(void);
 extern void test_parser_bad_crc_then_valid(void);
 extern void test_parser_non_sync_byte_idle(void);
 extern void test_parser_frame_type_and_payload_passed(void);
+extern void test_parser_reset_from_idle(void);
+extern void test_parser_reset_mid_frame(void);
+extern void test_parser_reset_after_length(void);
 
 /* ── test_unpack_channels.c ─────────────────────────────────────────── */
 extern void test_channels_all_zeros(void);
@@ -96,6 +99,9 @@ int main(int argc, char *argv[])
     RUN_FILTERED_TEST(test_parser_bad_crc_then_valid);
     RUN_FILTERED_TEST(test_parser_non_sync_byte_idle);
     RUN_FILTERED_TEST(test_parser_frame_type_and_payload_passed);
+    RUN_FILTERED_TEST(test_parser_reset_from_idle);
+    RUN_FILTERED_TEST(test_parser_reset_mid_frame);
+    RUN_FILTERED_TEST(test_parser_reset_after_length);
 
     /* Channel unpacking */
     RUN_FILTERED_TEST(test_channels_all_zeros);

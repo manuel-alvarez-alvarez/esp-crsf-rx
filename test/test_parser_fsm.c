@@ -316,3 +316,63 @@ void test_parser_frame_type_and_payload_passed(void)
     TEST_ASSERT_EQUAL_UINT8(0xBE, cap.payloads[0][2]);
     TEST_ASSERT_EQUAL_UINT8(0xEF, cap.payloads[0][3]);
 }
+
+/* ── Reset tests ─────────────────────────────────────────────────────── */
+
+void test_parser_reset_from_idle(void)
+{
+    parser_setup();
+    crsf_parser_reset(&parser);
+    TEST_ASSERT_EQUAL(CRSF_PARSE_IDLE, parser.state);
+
+    /* Parser should still work after reset */
+    uint8_t payload[] = {0xAA};
+    uint8_t frame[64];
+    size_t len = build_crsf_frame(frame, CRSF_ADDRESS_FLIGHT_CTRL,
+                                  CRSF_FRAMETYPE_HEARTBEAT, payload, 1);
+    crsf_parser_feed(&parser, frame, len);
+    TEST_ASSERT_EQUAL_INT(1, cap.count);
+}
+
+void test_parser_reset_mid_frame(void)
+{
+    parser_setup();
+    /* Feed a partial frame: sync + len + type (3 bytes of a 5-byte frame) */
+    uint8_t partial[] = {CRSF_ADDRESS_FLIGHT_CTRL, 0x03, CRSF_FRAMETYPE_HEARTBEAT};
+    crsf_parser_feed(&parser, partial, sizeof(partial));
+    TEST_ASSERT_EQUAL(CRSF_PARSE_DATA, parser.state);
+
+    /* Reset discards the partial frame */
+    crsf_parser_reset(&parser);
+    TEST_ASSERT_EQUAL(CRSF_PARSE_IDLE, parser.state);
+
+    /* Feed a complete valid frame — should parse cleanly */
+    uint8_t payload[] = {0xBB};
+    uint8_t frame[64];
+    size_t len = build_crsf_frame(frame, CRSF_ADDRESS_FLIGHT_CTRL,
+                                  CRSF_FRAMETYPE_VARIO, payload, 1);
+    crsf_parser_feed(&parser, frame, len);
+    TEST_ASSERT_EQUAL_INT(1, cap.count);
+    TEST_ASSERT_EQUAL_UINT8(CRSF_FRAMETYPE_VARIO, cap.frames[0].type);
+}
+
+void test_parser_reset_after_length(void)
+{
+    parser_setup();
+    /* Feed sync + length only */
+    uint8_t partial[] = {CRSF_ADDRESS_RADIO, 0x04};
+    crsf_parser_feed(&parser, partial, sizeof(partial));
+    TEST_ASSERT_EQUAL(CRSF_PARSE_DATA, parser.state);
+
+    crsf_parser_reset(&parser);
+    TEST_ASSERT_EQUAL(CRSF_PARSE_IDLE, parser.state);
+    TEST_ASSERT_EQUAL_INT(0, cap.count);
+
+    /* Valid frame after reset */
+    uint8_t payload[] = {0xCC, 0xDD};
+    uint8_t frame[64];
+    size_t len = build_crsf_frame(frame, CRSF_ADDRESS_RADIO,
+                                  CRSF_FRAMETYPE_GPS, payload, 2);
+    crsf_parser_feed(&parser, frame, len);
+    TEST_ASSERT_EQUAL_INT(1, cap.count);
+}

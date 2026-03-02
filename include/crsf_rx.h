@@ -24,7 +24,7 @@ typedef struct {
     size_t uart_rx_buf_size;    /* 0 = default (1024) */
     int uart_rx_full_thresh;    /* 0 = leave default; else uart_set_rx_full_threshold() */
     int uart_rx_timeout_thresh; /* 0 = leave default; else uart_set_rx_timeout() (UART driver units) */
-    uint32_t read_timeout_ms;   /* 0 = default (1) used by uart_read_bytes() */
+    int uart_evt_queue_size;    /* 0 = default (16) UART event queue depth */
     int task_priority;          /* 0 = default (10) */
     int task_core;              /* -1 = no affinity */
     size_t task_stack_size;     /* 0 = default (4096) */
@@ -39,7 +39,7 @@ typedef struct {
     .uart_rx_buf_size = 0,         \
     .uart_rx_full_thresh = 0,      \
     .uart_rx_timeout_thresh = 0,   \
-    .read_timeout_ms = 0,          \
+    .uart_evt_queue_size = 0,      \
     .task_priority   = 0,          \
     .task_core       = -1,         \
     .task_stack_size = 0,          \

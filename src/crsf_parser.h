@@ -28,6 +28,7 @@ typedef struct {
 } crsf_parser_t;
 
 void crsf_parser_init(crsf_parser_t *parser, crsf_parser_frame_cb_t cb, void *ctx);
+void crsf_parser_reset(crsf_parser_t *parser);
 void crsf_parser_feed(crsf_parser_t *parser, const uint8_t *data, size_t len);
 
 void crsf_unpack_channels(const uint8_t *payload, crsf_channels_t *out);

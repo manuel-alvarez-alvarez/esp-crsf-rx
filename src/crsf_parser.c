@@ -71,6 +71,12 @@ void crsf_parser_init(crsf_parser_t *parser, crsf_parser_frame_cb_t cb, void *ct
     parser->cb_ctx = ctx;
 }
 
+void crsf_parser_reset(crsf_parser_t *parser)
+{
+    parser->state = CRSF_PARSE_IDLE;
+    parser->pos = 0;
+}
+
 void crsf_parser_feed(crsf_parser_t *parser, const uint8_t *data, size_t len)
 {
     for (size_t i = 0; i < len; i++) {
