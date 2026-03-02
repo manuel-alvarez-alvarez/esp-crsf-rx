@@ -17,6 +17,7 @@ struct crsf_rx {
     TaskHandle_t    task;
     crsf_parser_t   parser;
     volatile bool   running;
+    TaskHandle_t    joiner; /* task waiting for rx task to exit */
 
     crsf_rx_cb_t    cb;
     void           *user_ctx;
@@ -112,6 +113,10 @@ static void crsf_rx_task(void *arg)
             crsf_parser_feed(&rx->parser, buf, (size_t)n);
         }
     }
+    /* Signal deinit() that we are done */
+    if (rx->joiner) {
+        xTaskNotifyGive(rx->joiner);
+    }
     vTaskDelete(NULL);
 }
 
@@ -203,11 +208,15 @@ esp_err_t crsf_rx_deinit(crsf_rx_handle_t *handle)
         return ESP_ERR_INVALID_ARG;
     }
 
-    (*handle)->running = false;
-    vTaskDelay(pdMS_TO_TICKS(20)); /* let the task see the flag and exit */
+    struct crsf_rx *rx = *handle;
+    /* Ask the task to stop and wait for it to finish */
+    rx->joiner = xTaskGetCurrentTaskHandle();
+    rx->running = false;
+    const TickType_t join_timeout = pdMS_TO_TICKS(250);
+    (void) ulTaskNotifyTake(pdTRUE, join_timeout);
 
-    uart_driver_delete((*handle)->uart_port);
-    free(*handle);
+    uart_driver_delete(rx->uart_port);
+    free(rx);
     *handle = NULL;
 
     ESP_LOGI(TAG, "stopped");
