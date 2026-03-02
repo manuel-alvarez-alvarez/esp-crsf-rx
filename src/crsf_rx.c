@@ -3,6 +3,7 @@
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
+#include <freertos/queue.h>
 #include <esp_log.h>
 #include <string.h>
 
@@ -11,11 +12,11 @@ static const char *TAG = "crsf_rx";
 #define DEFAULT_PRIORITY            10
 #define DEFAULT_STACK               4096
 #define DEFAULT_UART_RX_BUF_SIZE    1024
-#define DEFAULT_READ_TIMEOUT_MS     1
+#define DEFAULT_EVT_QUEUE_SIZE      16
 
 struct crsf_rx {
     uart_port_t     uart_port;
-    uint32_t        read_timeout_ms;
+    QueueHandle_t   evt_queue;
     TaskHandle_t    task;
     crsf_parser_t   parser;
     volatile bool   running;
@@ -103,17 +104,36 @@ static void crsf_rx_task(void *arg)
 {
     struct crsf_rx *rx = (struct crsf_rx *)arg;
     uint8_t buf[CRSF_MAX_FRAME_SIZE];
-    /* Short timeout so uart_read_bytes returns partial data promptly
-       instead of waiting to fill the entire buffer.  Must be >= 1 tick
-       to yield to IDLE (task WDT).  Requires CONFIG_FREERTOS_HZ=1000
-       for per-frame processing at high CRSF rates. */
-    const uint32_t ms = rx->read_timeout_ms ? rx->read_timeout_ms : DEFAULT_READ_TIMEOUT_MS;
-    const TickType_t timeout = pdMS_TO_TICKS(ms) > 0 ? pdMS_TO_TICKS(ms) : 1;
+    uart_event_t evt;
 
     while (rx->running) {
-        int n = uart_read_bytes(rx->uart_port, buf, sizeof(buf), timeout);
-        if (n > 0) {
-            crsf_parser_feed(&rx->parser, buf, (size_t)n);
+        if (!xQueueReceive(rx->evt_queue, &evt, pdMS_TO_TICKS(100))) {
+            continue;
+        }
+        switch (evt.type) {
+        case UART_DATA:
+            size_t pending = evt.size;
+            while (pending > 0) {
+                size_t chunk = pending > sizeof(buf) ? sizeof(buf) : pending;
+                int n = uart_read_bytes(rx->uart_port, buf, chunk, 0);
+                if (n <= 0) {
+                    break;
+                }
+                crsf_parser_feed(&rx->parser, buf, (size_t)n);
+                pending -= (size_t)n;
+            }
+            break;
+        case UART_FIFO_OVF:
+        case UART_BUFFER_FULL:
+        case UART_BREAK:
+        case UART_PARITY_ERR:
+        case UART_FRAME_ERR:
+            uart_flush_input(rx->uart_port);
+            xQueueReset(rx->evt_queue);
+            crsf_parser_reset(&rx->parser);
+            break;
+        default:
+            break;
         }
     }
     /* Signal deinit() that we are done */
@@ -140,10 +160,9 @@ esp_err_t crsf_rx_init(const crsf_rx_config_t *config, crsf_rx_handle_t *out_han
         return ESP_ERR_NO_MEM;
     }
 
-    rx->uart_port       = config->uart_port;
-    rx->read_timeout_ms = config->read_timeout_ms;
-    rx->cb              = config->cb;
-    rx->user_ctx        = config->user_ctx;
+    rx->uart_port = config->uart_port;
+    rx->cb        = config->cb;
+    rx->user_ctx  = config->user_ctx;
 
     crsf_parser_init(&rx->parser, on_frame, rx);
 
@@ -164,7 +183,11 @@ esp_err_t crsf_rx_init(const crsf_rx_config_t *config, crsf_rx_handle_t *out_han
     const int rx_buf = (config->uart_rx_buf_size > 0)
         ? (int)config->uart_rx_buf_size
         : DEFAULT_UART_RX_BUF_SIZE;
-    err = uart_driver_install(config->uart_port, rx_buf, 0, 0, NULL, 0);
+    const int evt_q = (config->uart_evt_queue_size > 0)
+        ? config->uart_evt_queue_size
+        : DEFAULT_EVT_QUEUE_SIZE;
+    err = uart_driver_install(config->uart_port, rx_buf, 0,
+                              evt_q, &rx->evt_queue, 0);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "uart_driver_install failed: %s", esp_err_to_name(err));
         free(rx);

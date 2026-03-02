@@ -15,7 +15,6 @@ High-performance [CRSF](https://github.com/crsf-wg/crsf/wiki) / [ELRS](https://w
 ## Requirements
 
 - ESP-IDF >= 5.0
-- `CONFIG_FREERTOS_HZ=1000` (required for 1 ms UART read timeout)
 
 ## Installation
 
@@ -66,7 +65,7 @@ Use `CRSF_RX_DEFAULT_CONFIG()` and override only the fields you need.
 | `uart_rx_buf_size` | `size_t` | `1024` | UART RX ring buffer size in bytes |
 | `uart_rx_full_thresh` | `int` | driver default | UART RX FIFO full threshold |
 | `uart_rx_timeout_thresh` | `int` | driver default | UART RX timeout threshold (UART symbol units) |
-| `read_timeout_ms` | `uint32_t` | `1` | `uart_read_bytes()` timeout in ms |
+| `uart_evt_queue_size` | `int` | `16` | UART event queue depth |
 | `task_priority` | `int` | `10` | FreeRTOS task priority |
 | `task_core` | `int` | no affinity | Pin task to core (`-1` = any) |
 | `task_stack_size` | `size_t` | `4096` | Task stack size in bytes |
