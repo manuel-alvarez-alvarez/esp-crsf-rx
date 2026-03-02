@@ -61,11 +61,15 @@ void app_main(void) {
     ESP_ERROR_CHECK(crsf_rx_init(&cfg, &rx));
 
     crsf_channels_t msg;
-    while (1) {
+    for (int i = 0; i < 10; i++) {
         vTaskDelay(pdMS_TO_TICKS(1000));
         ESP_LOGI(TAG, "--- %lu Hz ---", (unsigned long)frame_hz);
         if (xQueueReceive(channels, &msg, 0) == pdTRUE) {
             print_message(&msg);
         }
     }
+
+    ESP_LOGI(TAG, "Stopping receiver...");
+    ESP_ERROR_CHECK(crsf_rx_deinit(&rx));
+    ESP_LOGI(TAG, "Done");
 }
