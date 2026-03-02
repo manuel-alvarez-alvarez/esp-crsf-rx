@@ -1,0 +1,95 @@
+name: CI
+
+on:
+  pull_request:
+
+env:
+  IDF_VERSION: "5.4"
+
+jobs:
+
+  build:
+    name: ESP-IDF Build (${{ matrix.idf_target }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        idf_target: [ esp32, esp32s3, esp32c3 ]
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Cache ESP-IDF Docker image
+        id: cache-idf
+        uses: actions/cache@v5.0.3
+        with:
+          path: /tmp/idf-image.tar
+          key: idf-docker-v${{ env.IDF_VERSION }}
+
+      - name: Load cached Docker image
+        if: steps.cache-idf.outputs.cache-hit == 'true'
+        run: docker load -i /tmp/idf-image.tar
+
+      - name: Pull and save Docker image
+        if: steps.cache-idf.outputs.cache-hit != 'true'
+        run: |
+          docker pull espressif/idf:v${{ env.IDF_VERSION }}
+          docker save espressif/idf:v${{ env.IDF_VERSION }} -o /tmp/idf-image.tar
+
+      - name: Restore ccache
+        uses: actions/cache@v5.0.3
+        with:
+          path: .ccache
+          key: ccache-idf-v${{ env.IDF_VERSION }}-${{ matrix.idf_target }}
+
+      - name: Build example
+        uses: espressif/esp-idf-ci-action@v1
+        with:
+          esp_idf_version: v${{ env.IDF_VERSION }}
+          target: ${{ matrix.idf_target }}
+          path: examples/basic
+          extra_docker_args: >-
+            -v ${{ github.workspace }}/.ccache:/root/.ccache
+            -e CCACHE_DIR=/root/.ccache
+            -e IDF_CCACHE_ENABLE=1
+            -e CCACHE_MAXSIZE=500M
+
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    permissions:
+      checks: write
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Configure
+        run: cmake -B test/build test
+
+      - name: Build
+        run: cmake --build test/build
+
+      - name: Run tests
+        run: |
+          ctest --test-dir test/build --output-on-failure --output-junit results.xml
+          sed -i \
+            -e 's/name="(empty)"/name="esp-crsf-rx"/' \
+            -e 's/classname="test_parser_[^"]*"/classname="parser"/g' \
+            -e 's/classname="test_channels_[^"]*"/classname="channels"/g' \
+            -e 's/classname="test_unpack_[^"]*"/classname="telemetry"/g' \
+            test/build/results.xml
+
+      - name: Publish test results
+        uses: mikepenz/action-junit-report@v6
+        if: success() || failure()
+        with:
+          report_paths: test/build/results.xml
+          check_name: Test Results
+          include_passed: true
+          detailed_summary: true
+          include_time_in_summary: true
+          group_suite: true
+          require_tests: true
+          fail_on_failure: true
+          comment: true
+          updateComment: true
