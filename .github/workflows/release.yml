@@ -5,6 +5,7 @@ on:
 
 jobs:
   release:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -118,6 +119,7 @@ jobs:
           body: ${{ steps.notes.outputs.changelog }}
 
       - name: Upload component to the component registry
+        if: steps.guard.outputs.release == 'true'
         uses: espressif/upload-components-ci-action@v2
         with:
           components: "esp-crsf-rx: ."
