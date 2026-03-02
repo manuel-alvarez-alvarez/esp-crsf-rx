@@ -21,6 +21,10 @@ typedef struct {
     uart_port_t uart_port;      /* UART peripheral (default: UART_NUM_1) */
     int rx_pin;                 /* GPIO for RX */
     uint32_t baudrate;          /* 0 = CRSF_BAUDRATE (420000) */
+    size_t uart_rx_buf_size;    /* 0 = default (1024) */
+    int uart_rx_full_thresh;    /* 0 = leave default; else uart_set_rx_full_threshold() */
+    int uart_rx_timeout_thresh; /* 0 = leave default; else uart_set_rx_timeout() (UART driver units) */
+    uint32_t read_timeout_ms;   /* 0 = default (1) used by uart_read_bytes() */
     int task_priority;          /* 0 = default (10) */
     int task_core;              /* -1 = no affinity */
     size_t task_stack_size;     /* 0 = default (4096) */
@@ -32,6 +36,10 @@ typedef struct {
     .uart_port       = UART_NUM_1, \
     .rx_pin          = -1,         \
     .baudrate        = 0,          \
+    .uart_rx_buf_size = 0,         \
+    .uart_rx_full_thresh = 0,      \
+    .uart_rx_timeout_thresh = 0,   \
+    .read_timeout_ms = 0,          \
     .task_priority   = 0,          \
     .task_core       = -1,         \
     .task_stack_size = 0,          \
