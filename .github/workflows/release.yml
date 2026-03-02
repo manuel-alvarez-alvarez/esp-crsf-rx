@@ -1,0 +1,116 @@
+name: Release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write # IMPORTANT: Required to generate an OIDC Token
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Compute next version
+        id: version
+        uses: paulhatch/semantic-version@v6.0.1
+        with:
+          debug: true
+          search_commit_body: true
+
+      # Properly stop the rest of the job by emitting an output flag
+      - name: Decide whether to release
+        id: guard
+        shell: bash
+        run: |
+          if [ "${{ steps.version.outputs.is_tagged }}" = "true" ]; then
+            echo "::notice::Current commit already released as ${{ steps.version.outputs.version_tag }}"
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ "${{ steps.version.outputs.version_type }}" = "none" ]; then
+            echo "::notice::No conventional commits found since last release"
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "release=true" >> "$GITHUB_OUTPUT"
+
+      - name: Update idf_component.yml
+        if: steps.guard.outputs.release == 'true'
+        shell: bash
+        run: |
+          sed -i 's/^version: ".*"/version: "${{ steps.version.outputs.version }}"/' idf_component.yml
+
+      - name: Commit version bump and tag
+        if: steps.guard.outputs.release == 'true'
+        shell: bash
+        env:
+          TAG: v${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Never rewrite tags. If it exists, stop safely.
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "::notice::Tag $TAG already exists. Not retagging."
+            exit 0
+          fi
+
+          git add idf_component.yml
+          # Avoid failing if the file already contains the same version for some reason
+          git diff --cached --quiet && echo "No idf_component.yml change to commit" || git commit -m "release: ${TAG}"
+
+          git tag "$TAG"
+          git push origin HEAD:${{ github.ref_name }}
+          git push origin HEAD:main
+          git push origin "$TAG"
+
+      - name: Generate release notes
+        if: steps.guard.outputs.release == 'true'
+        id: notes
+        uses: mikepenz/release-changelog-builder-action@v6.1.0
+        with:
+          mode: "COMMIT"
+          configurationJson: |
+            {
+              "template": "#{{CHANGELOG}}",
+              "categories": [
+                {
+                    "title": "## 🚀 Features",
+                    "labels": ["feat", "feature"]
+                },
+                {
+                    "title": "## 🐛 Fixes",
+                    "labels": ["fix", "bug"]
+                },
+                {
+                    "title": "## Other",
+                    "labels": []
+                }
+              ],
+              "label_extractor": [
+                {
+                  "pattern": "^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test){1}(\\([\\w\\-\\.]+\\))?(!)?: ([\\w ])+([\\s\\S]*)",
+                  "on_property": "title",
+                  "target": "$1"
+                }
+              ]
+            }
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Upload component to the component registry
+        uses: espressif/upload-components-ci-action@v2
+        with:
+          components: "esp-crsf-rx: ."
+          namespace: "manuel-alvarez-alvarez"
