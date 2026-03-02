@@ -56,20 +56,24 @@ A full example is available in [`examples/basic`](examples/basic).
 
 ### Configuration
 
-```c
-typedef struct {
-    uart_port_t uart_port;      // UART peripheral (default: UART_NUM_1)
-    int         rx_pin;         // GPIO pin for CRSF input (required)
-    uint32_t    baudrate;       // 0 = 420000 bps (CRSF standard)
-    int         task_priority;  // 0 = default (10)
-    int         task_core;      // -1 = no core affinity
-    size_t      task_stack_size;// 0 = default (4096)
-    crsf_rx_cb_t cb;            // Frame callback (optional)
-    void        *user_ctx;      // Passed to callback as second argument
-} crsf_rx_config_t;
-```
-
 Use `CRSF_RX_DEFAULT_CONFIG()` and override only the fields you need.
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `uart_port` | `uart_port_t` | `UART_NUM_1` | UART peripheral to use |
+| `rx_pin` | `int` | `-1` | GPIO pin for CRSF input (**required**) |
+| `baudrate` | `uint32_t` | `420000` | CRSF baud rate |
+| `uart_rx_buf_size` | `size_t` | `1024` | UART RX ring buffer size in bytes |
+| `uart_rx_full_thresh` | `int` | driver default | UART RX FIFO full threshold |
+| `uart_rx_timeout_thresh` | `int` | driver default | UART RX timeout threshold (UART symbol units) |
+| `read_timeout_ms` | `uint32_t` | `1` | `uart_read_bytes()` timeout in ms |
+| `task_priority` | `int` | `10` | FreeRTOS task priority |
+| `task_core` | `int` | no affinity | Pin task to core (`-1` = any) |
+| `task_stack_size` | `size_t` | `4096` | Task stack size in bytes |
+| `cb` | `crsf_rx_cb_t` | `NULL` | Frame callback (optional) |
+| `user_ctx` | `void *` | `NULL` | User context passed to callback |
+
+Fields set to `0` (or `-1` for `task_core`) use their defaults.
 
 ### Functions
 

@@ -8,12 +8,14 @@
 
 static const char *TAG = "crsf_rx";
 
-#define DEFAULT_PRIORITY    10
-#define DEFAULT_STACK       4096
-#define UART_RX_BUF_SIZE    1024
+#define DEFAULT_PRIORITY            10
+#define DEFAULT_STACK               4096
+#define DEFAULT_UART_RX_BUF_SIZE    1024
+#define DEFAULT_READ_TIMEOUT_MS     1
 
 struct crsf_rx {
     uart_port_t     uart_port;
+    uint32_t        read_timeout_ms;
     TaskHandle_t    task;
     crsf_parser_t   parser;
     volatile bool   running;
@@ -105,7 +107,8 @@ static void crsf_rx_task(void *arg)
        instead of waiting to fill the entire buffer.  Must be >= 1 tick
        to yield to IDLE (task WDT).  Requires CONFIG_FREERTOS_HZ=1000
        for per-frame processing at high CRSF rates. */
-    const TickType_t timeout = pdMS_TO_TICKS(1) > 0 ? pdMS_TO_TICKS(1) : 1;
+    const uint32_t ms = rx->read_timeout_ms ? rx->read_timeout_ms : DEFAULT_READ_TIMEOUT_MS;
+    const TickType_t timeout = pdMS_TO_TICKS(ms) > 0 ? pdMS_TO_TICKS(ms) : 1;
 
     while (rx->running) {
         int n = uart_read_bytes(rx->uart_port, buf, sizeof(buf), timeout);
@@ -137,9 +140,10 @@ esp_err_t crsf_rx_init(const crsf_rx_config_t *config, crsf_rx_handle_t *out_han
         return ESP_ERR_NO_MEM;
     }
 
-    rx->uart_port = config->uart_port;
-    rx->cb        = config->cb;
-    rx->user_ctx  = config->user_ctx;
+    rx->uart_port       = config->uart_port;
+    rx->read_timeout_ms = config->read_timeout_ms;
+    rx->cb              = config->cb;
+    rx->user_ctx        = config->user_ctx;
 
     crsf_parser_init(&rx->parser, on_frame, rx);
 
@@ -157,7 +161,10 @@ esp_err_t crsf_rx_init(const crsf_rx_config_t *config, crsf_rx_handle_t *out_han
 
     esp_err_t err;
 
-    err = uart_driver_install(config->uart_port, UART_RX_BUF_SIZE, 0, 0, NULL, 0);
+    const int rx_buf = (config->uart_rx_buf_size > 0)
+        ? (int)config->uart_rx_buf_size
+        : DEFAULT_UART_RX_BUF_SIZE;
+    err = uart_driver_install(config->uart_port, rx_buf, 0, 0, NULL, 0);
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "uart_driver_install failed: %s", esp_err_to_name(err));
         free(rx);
@@ -177,6 +184,14 @@ esp_err_t crsf_rx_init(const crsf_rx_config_t *config, crsf_rx_handle_t *out_han
         uart_driver_delete(config->uart_port);
         free(rx);
         return err;
+    }
+
+    /* Optional UART driver tuning knobs (leave defaults if 0) */
+    if (config->uart_rx_full_thresh > 0) {
+        (void) uart_set_rx_full_threshold(config->uart_port, config->uart_rx_full_thresh);
+    }
+    if (config->uart_rx_timeout_thresh > 0) {
+        (void) uart_set_rx_timeout(config->uart_port, config->uart_rx_timeout_thresh);
     }
 
     /* Start receiver task */
