@@ -16,11 +16,11 @@ jobs:
       matrix:
         idf_target: [ esp32, esp32s3, esp32c3 ]
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v4
 
       - name: Cache ESP-IDF Docker image
         id: cache-idf
-        uses: actions/cache@v5.0.3
+        uses: actions/cache@v5
         with:
           path: /tmp/idf-image.tar
           key: idf-docker-v${{ env.IDF_VERSION }}
@@ -36,7 +36,7 @@ jobs:
           docker save espressif/idf:v${{ env.IDF_VERSION }} -o /tmp/idf-image.tar
 
       - name: Restore ccache
-        uses: actions/cache@v5.0.3
+        uses: actions/cache@v5
         with:
           path: .ccache
           key: ccache-idf-v${{ env.IDF_VERSION }}-${{ matrix.idf_target }}
