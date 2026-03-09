@@ -1,6 +1,6 @@
 version: "0.2.0"
 description: "High-performance ELRS/CRSF receiver decoder for ESP-IDF"
-url: "https://github.com/manuelmalvarez/esp-crsf-rx"
+url: "https://github.com/manuel-alvarez-alvarez/esp-crsf-rx"
 targets:
   - esp32
   - esp32s2
