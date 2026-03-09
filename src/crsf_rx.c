@@ -247,16 +247,37 @@ esp_err_t crsf_rx_deinit(crsf_rx_handle_t *handle)
     }
 
     struct crsf_rx *rx = *handle;
+    TaskHandle_t caller = xTaskGetCurrentTaskHandle();
+
+    if (caller == rx->task) {
+        ESP_LOGE(TAG, "crsf_rx_deinit must not be called from the receiver task");
+        return ESP_ERR_INVALID_STATE;
+    }
+
     /* Ask the task to stop and wait for it to finish */
-    rx->joiner = xTaskGetCurrentTaskHandle();
+    rx->joiner = caller;
     rx->running = false;
-    const TickType_t join_timeout = pdMS_TO_TICKS(250);
-    (void) ulTaskNotifyTake(pdTRUE, join_timeout);
+    if (rx->evt_queue) {
+        xQueueReset(rx->evt_queue);
+    }
+
+    const TickType_t join_timeout = pdMS_TO_TICKS(500);
+    esp_err_t wait_result = ESP_OK;
+    if (rx->task) {
+        uint32_t notified = ulTaskNotifyTake(pdTRUE, join_timeout);
+        if (notified == 0) {
+            ESP_LOGW(TAG, "timeout waiting for receiver task to stop; forcing delete");
+            vTaskDelete(rx->task);
+            wait_result = ESP_ERR_TIMEOUT;
+        }
+    }
+    rx->task = NULL;
+    rx->joiner = NULL;
 
     uart_driver_delete(rx->uart_port);
     free(rx);
     *handle = NULL;
 
     ESP_LOGI(TAG, "stopped");
-    return ESP_OK;
+    return wait_result;
 }

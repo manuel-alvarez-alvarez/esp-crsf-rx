@@ -55,6 +55,7 @@ esp_err_t crsf_rx_init(const crsf_rx_config_t *config, crsf_rx_handle_t *out_han
 
 /**
  * Stop the receiver task, release UART, and free resources.
+ * Must be called from a different task than the receiver callback/task.
  */
 esp_err_t crsf_rx_deinit(crsf_rx_handle_t *handle);
 
