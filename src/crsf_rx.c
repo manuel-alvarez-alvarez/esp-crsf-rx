@@ -128,6 +128,7 @@ static void crsf_rx_task(void *arg)
         case UART_BREAK:
         case UART_PARITY_ERR:
         case UART_FRAME_ERR:
+            ESP_LOGW(TAG, "UART error: type=%d size=%d — flushing input", (int)evt.type, (int)evt.size);
             uart_flush_input(rx->uart_port);
             xQueueReset(rx->evt_queue);
             crsf_parser_reset(&rx->parser);
